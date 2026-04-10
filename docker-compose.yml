@@ -1,0 +1,8 @@
+version: "3.9"
+
+services:
+  fastapi:
+    image: arhamfastapiacr.azurecr.io/fastapi-app:latest
+    ports:
+      - "8000:8000"
+    restart: always
