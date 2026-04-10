@@ -1,0 +1,41 @@
+name: Deploy to Azure VM
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Login to ACR
+      run: |
+        echo "${{ secrets.ACR_PASSWORD }}" | docker login arhamfastapiacr.azurecr.io \
+        -u "${{ secrets.ACR_USERNAME }}" --password-stdin
+
+    - name: Build Docker Image
+      run: docker build -t fastapi-app .
+
+    - name: Tag Image
+      run: docker tag fastapi-app arhamfastapiacr.azurecr.io/fastapi-app:latest
+
+    - name: Push Image
+      run: docker push arhamfastapiacr.azurecr.io/fastapi-app:latest
+
+    - name: Deploy to VM via SSH
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.VM_IP }}
+        username: azureuser
+        key: ${{ secrets.SSH_KEY }}
+        script: |
+          docker pull arhamfastapiacr.azurecr.io/fastapi-app:latest
+          docker stop fastapi-container || true
+          docker rm fastapi-container || true
+          docker run -d -p 8000:8000 --name fastapi-container \
+            arhamfastapiacr.azurecr.io/fastapi-app:latest
